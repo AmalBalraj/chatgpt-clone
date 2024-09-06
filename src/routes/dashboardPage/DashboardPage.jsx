@@ -1,25 +1,42 @@
+import { useMutation, useQueryClient } from "react-query";
 import "./dashboardPage.css";
-import {useAuth} from "@clerk/clerk-react";
+import { useNavigate } from "react-router-dom";
 
 const DashboardPage = () => {
+    const queryClient = useQueryClient();
 
-    const {userId} = useAuth();
+    const navigate = useNavigate()
+
+    const mutation = useMutation(
+        (text) => {
+            return fetch(`${import.meta.env.VITE_API_URL}/api/chats`, {
+                method: "POST",
+                credentials: "include",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ text }),
+            }).then(res=>res.json());
+        },
+        {
+            onSuccess: (id) => {
+                // Invalidate and refetch
+                console.log(id)
+                
+                queryClient.invalidateQueries({ queryKey: ["userChats"] });
+                navigate(`/dashboard/chats/${id}`)
+            },
+        }
+    );
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         const text = e.target.text.value;
 
-        if(!text) return;
+        if (!text) return;
 
-        await fetch("http://localhost:3000/api/chats", {
-            method:"POST",
-            credentials:"include",
-            headers:{
-                "Content-Type":"application/json",
-            },
-            body:JSON.stringify({userId, text})
-        })
-        
-    }
+        mutation.mutate(text)
+    };
     return (
         <div className="dashboardPage">
             <div className="texts">
@@ -43,13 +60,16 @@ const DashboardPage = () => {
                 </div>
             </div>
             <div className="formContainer">
-              <form onSubmit={handleSubmit}>
-                <input type="text" name="text" placeholder="Ask me anything..."/>
-                <button>
-                  <img src="/arrow.png" alt="" />
-                </button>
-
-              </form>
+                <form onSubmit={handleSubmit}>
+                    <input
+                        type="text"
+                        name="text"
+                        placeholder="Ask me anything..."
+                    />
+                    <button>
+                        <img src="/arrow.png" alt="" />
+                    </button>
+                </form>
             </div>
         </div>
     );
